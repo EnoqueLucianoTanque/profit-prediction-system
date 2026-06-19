@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import plotly.express as px
-import plotly.graph_objects as go
+import numpy as np
 
 # ====================================
 # CONFIGURAÇÃO
@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # ====================================
-# CSS PREMIUM (COM CARDS COLORIDOS)
+# CSS
 # ====================================
 
 st.markdown("""
@@ -26,9 +26,17 @@ st.markdown("""
     color: white;
 }
 
-/* TITULO */
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 0rem;
+}
+
+div[data-testid="stVerticalBlock"] {
+    gap: 0.4rem;
+}
+
 .main-title {
-    font-size: 46px;
+    font-size: 42px;
     font-weight: 800;
     text-align: center;
     margin-bottom: 5px;
@@ -37,62 +45,30 @@ st.markdown("""
 .subtitle {
     text-align: center;
     color: #9CA3AF;
-    font-size: 15px;
-    margin-bottom: 25px;
+    font-size: 14px;
+    margin-bottom: 15px;
 }
 
-/* BASE CARD */
 .card {
-    padding: 18px;
-    border-radius: 16px;
-    text-align: center;
-    box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
-    border: 1px solid rgba(255,255,255,0.06);
-    transition: 0.3s;
-}
-
-.card:hover {
-    transform: translateY(-4px);
-}
-
-/* CORES DOS CARDS */
-.card-blue {
-    background: linear-gradient(145deg, #1E3A8A, #0B1220);
-}
-
-.card-green {
-    background: linear-gradient(145deg, #065F46, #0B1220);
-}
-
-.card-purple {
-    background: linear-gradient(145deg, #5B21B6, #0B1220);
-}
-
-.card-orange {
-    background: linear-gradient(145deg, #9A3412, #0B1220);
-}
-
-/* BOTÃO */
-.stButton>button {
-    width: 100%;
-    background: linear-gradient(90deg, #3B82F6, #2563EB);
-    color: white;
-    font-weight: bold;
     padding: 12px;
-    border-radius: 12px;
-    border: none;
-    transition: 0.3s;
+    border-radius: 14px;
+    text-align: center;
+    box-shadow: 0px 10px 25px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.06);
 }
 
-.stButton>button:hover {
-    transform: scale(1.02);
-    box-shadow: 0px 6px 20px rgba(59,130,246,0.4);
+.card-blue { background: linear-gradient(145deg, #1E3A8A, #0B1220); }
+.card-green { background: linear-gradient(145deg, #065F46, #0B1220); }
+.card-purple { background: linear-gradient(145deg, #5B21B6, #0B1220); }
+.card-orange { background: linear-gradient(145deg, #9A3412, #0B1220); }
+
+div[data-baseweb="input"] {
+    margin-bottom: -10px !important;
 }
 
-/* DATAFRAME */
 [data-testid="stDataFrame"] {
     background-color: #0B1220;
-    border-radius: 12px;
+    border-radius: 10px;
 }
 
 </style>
@@ -109,7 +85,6 @@ modelo = joblib.load("modelo_xgb.pkl")
 # ====================================
 
 st.markdown('<p class="main-title">📈 Intelligent Profit Forecasting System</p>', unsafe_allow_html=True)
-
 st.markdown('<p class="subtitle">Machine Learning • XGBoost • Predictive Analytics • Business Intelligence</p>', unsafe_allow_html=True)
 
 st.divider()
@@ -118,26 +93,28 @@ st.divider()
 # INPUTS
 # ====================================
 
-col_left, col_right = st.columns([1, 2])
+col_left, col_right = st.columns([1, 1], vertical_alignment="top")
 
 with col_left:
 
     st.subheader("⚙️ Business Parameters")
-    st.markdown("---")
 
-    marketing = st.number_input("Marketing", value=30000.0)
-    preco = st.number_input("Preço Unitário", value=1200.0)
-    clientes = st.number_input("Clientes", value=200)
-    quantidade = st.number_input("Quantidade Vendida", value=50)
-    stock = st.number_input("Nível de Stock", value=500)
-    desconto = st.number_input("Desconto (%)", value=10.0)
+    c1, c2 = st.columns(2)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    with c1:
+        marketing = st.number_input("Marketing", value=30000.0)
+        clientes = st.number_input("Clientes", value=200)
+        stock = st.number_input("Stock", value=500)
 
-    predict_btn = st.button("🚀 CALCULAR PREVISÃO")
+    with c2:
+        preco = st.number_input("Preço Unitário", value=1200.0)
+        quantidade = st.number_input("Quantidade Vendida", value=50)
+        desconto = st.number_input("Desconto (%)", value=10.0)
+
+    predict_btn = st.button("🚀 CALCULAR PREVISÃO", use_container_width=True)
 
 # ====================================
-# PREVIEW
+# PREVIEW + RESULTADO
 # ====================================
 
 with col_right:
@@ -153,10 +130,35 @@ with col_right:
         "Desconto": desconto
     }])
 
-    st.dataframe(preview, use_container_width=True)
+    st.dataframe(preview, use_container_width=True, height=140)
+
+    if predict_btn:
+
+        novos_dados = pd.DataFrame([{
+            "Marketing": marketing,
+            "Preco_Unitario": preco,
+            "Clientes": clientes,
+            "Quantidade_Vendida": quantidade,
+            "Nivel_Stock": stock,
+            "Desconto": desconto
+        }])
+
+        previsao = modelo.predict(novos_dados)[0]
+
+        st.markdown("### 💰 Resultado da Previsão")
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.metric("Lucro Previsto", f"MZN {previsao:,.2f}")
+
+        with c2:
+            st.metric("Modelo", "XGBoost")
+
+        st.success(f"Lucro estimado: MZN {previsao:,.2f}")
 
 # ====================================
-# KPIs MODERNOS (CORES DIFERENTES)
+# KPIs
 # ====================================
 
 st.divider()
@@ -191,55 +193,22 @@ k4.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-st.divider()
-
 # ====================================
-# PREVISÃO
+# PERFORMANCE + FEATURE IMPORTANCE + SIMULAÇÃO
 # ====================================
 
 if predict_btn:
 
-    novos_dados = pd.DataFrame([{
-        "Marketing": marketing,
-        "Preco_Unitario": preco,
-        "Clientes": clientes,
-        "Quantidade_Vendida": quantidade,
-        "Nivel_Stock": stock,
-        "Desconto": desconto
-    }])
-
-    previsao = modelo.predict(novos_dados)[0]
-
-    st.subheader("💰 Resultado da Previsão")
+    st.divider()
+    st.subheader("🤖 Performance do Modelo")
 
     c1, c2 = st.columns(2)
 
     with c1:
-        st.metric("Lucro Previsto", f"MZN {previsao:,.2f}")
-
-    with c2:
-        st.metric("Modelo", "XGBoost")
-
-    st.success(f"Lucro estimado: MZN {previsao:,.2f}")
-
-    # ====================================
-    # PERFORMANCE
-    # ====================================
-
-    st.divider()
-    st.subheader("🤖 Performance do Modelo")
-
-    m1, m2 = st.columns(2)
-
-    with m1:
         st.metric("R² Score", "0.81")
 
-    with m2:
+    with c2:
         st.metric("MAE", "5,960")
-
-    # ====================================
-    # FEATURE IMPORTANCE
-    # ====================================
 
     st.divider()
     st.subheader("📈 Impacto das Variáveis")
@@ -264,14 +233,10 @@ if predict_btn:
         y="Variável",
         orientation="h",
         template="plotly_dark",
-        height=500
+        height=420
     )
 
     st.plotly_chart(fig, use_container_width=True)
-
-    # ====================================
-    # INTERPRETAÇÃO
-    # ====================================
 
     top_feature = importancias.sort_values(
         "Importância", ascending=False
@@ -280,25 +245,91 @@ if predict_btn:
     st.info(f"🔍 Fator mais influente: {top_feature}")
 
     # ====================================
-    # SOBRE O MODELO
+    # 📊 SIMULAÇÃO: ISOLADO vs COMBINADO
     # ====================================
 
     st.divider()
-    st.subheader("📚 Sobre o Modelo")
+    st.subheader("📊 Simulação de Cenários de Lucro")
 
-    st.markdown("""
-    ### Modelo Utilizado
-    XGBoost Regressor
+    col_a, col_b = st.columns(2)
 
-    ### Objetivo
-    Prever lucro empresarial com base em variáveis operacionais.
+    # 🔵 ISOLADO
+    with col_a:
 
-    ### Tecnologias
-    Python • Pandas • Scikit-Learn • XGBoost • Streamlit • Plotly
+        st.markdown("### 🔵 Análise Isolada (Marketing)")
 
-    ### Aplicação
-    Simulação de cenários de negócio e apoio à decisão estratégica.
-    """)
+        marketing_range = np.linspace(marketing * 0.7, marketing * 1.5, 6)
+
+        isolado = []
+
+        for m in marketing_range:
+            df = pd.DataFrame([{
+                "Marketing": m,
+                "Preco_Unitario": preco,
+                "Clientes": clientes,
+                "Quantidade_Vendida": quantidade,
+                "Nivel_Stock": stock,
+                "Desconto": desconto
+            }])
+
+            lucro = modelo.predict(df)[0]
+
+            isolado.append({"Marketing": m, "Lucro": lucro})
+
+        df_iso = pd.DataFrame(isolado)
+
+        fig_iso = px.line(
+            df_iso,
+            x="Marketing",
+            y="Lucro",
+            markers=True,
+            template="plotly_dark",
+            title="Impacto isolado do Marketing"
+        )
+
+        st.plotly_chart(fig_iso, use_container_width=True)
+
+    # 🟢 COMBINADO
+    with col_b:
+
+        st.markdown("### 🟢 Análise Combinada")
+
+        combinado = []
+
+        marketing_range = np.linspace(marketing * 0.7, marketing * 1.5, 6)
+        clientes_range = np.linspace(clientes * 0.7, clientes * 1.5, 6)
+        desconto_range = np.linspace(desconto * 0.5, desconto * 1.5, 6)
+
+        for i in range(6):
+
+            df = pd.DataFrame([{
+                "Marketing": marketing_range[i],
+                "Preco_Unitario": preco,
+                "Clientes": clientes_range[i],
+                "Quantidade_Vendida": quantidade,
+                "Nivel_Stock": stock,
+                "Desconto": desconto_range[i]
+            }])
+
+            lucro = modelo.predict(df)[0]
+
+            combinado.append({
+                "Cenario": f"Cenário {i+1}",
+                "Lucro": lucro
+            })
+
+        df_com = pd.DataFrame(combinado)
+
+        fig_com = px.line(
+            df_com,
+            x="Cenario",
+            y="Lucro",
+            markers=True,
+            template="plotly_dark",
+            title="Impacto combinado (Marketing + Clientes + Desconto)"
+        )
+
+        st.plotly_chart(fig_com, use_container_width=True)
 
 # ====================================
 # FOOTER
